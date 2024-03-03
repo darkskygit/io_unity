@@ -114,7 +114,7 @@ pub trait Texture2DObject {
                     height as u32,
                     footprint,
                     |x, y, color| {
-                        output[(x as usize + y as usize * width)] = color;
+                        output[x as usize + y as usize * width] = color;
                     },
                 )?;
 

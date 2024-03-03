@@ -119,7 +119,7 @@ pub struct SerializedType {
 #[br(import { big_id_enabled: bool})]
 #[derive(Debug, PartialEq)]
 pub struct Object {
-    #[br(parse_with = path_id_parser, args (big_id_enabled))]
+    #[br(parse_with = path_id_parser, args ((big_id_enabled,)))]
     pub path_id: i64,
     pub byte_start: u32,
     pub byte_size: u32,
