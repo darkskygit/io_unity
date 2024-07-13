@@ -178,7 +178,19 @@ impl TryCastFrom<&TypeTreeObjectRef, &[String]> for HashMap<String, TypeTreeObje
         let entites = <Vec<TypeTreeObjectRef>>::try_cast_from(value, path)?;
         let mut map = HashMap::new();
         for entry in entites {
-            let key = String::try_cast_from(&entry, "/Base/first");
+            let mut key = String::try_cast_from(&entry, "/Base/first");
+
+            #[cfg(feature = "external-class-handle")]
+            {
+                use super::super::classes::{guid::*, pair::*};
+                if key.is_err() {
+                    key = TypeTreeObjectRef::try_cast_from(&entry, "/Base/first").and_then(|e| {
+                        let (first, _) = KeyValuePair::new(&e).get_pair()?;
+                        return Guid::new(&first).get_guid();
+                    });
+                };
+            }
+
             let value = TypeTreeObjectRef::try_cast_from(&entry, "/Base/second");
             if let Ok(key) = key {
                 if let Ok(value) = value {

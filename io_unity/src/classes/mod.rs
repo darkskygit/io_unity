@@ -3,10 +3,14 @@ pub mod animation_clip;
 #[cfg(feature = "external-class-handle")]
 pub mod audio_clip;
 #[cfg(feature = "external-class-handle")]
+pub mod guid;
+#[cfg(feature = "external-class-handle")]
 pub mod mesh;
 #[cfg(feature = "external-class-handle")]
 pub mod named_object;
 pub mod p_ptr;
+#[cfg(feature = "external-class-handle")]
+pub mod pair;
 #[cfg(feature = "external-class-handle-texture2d")]
 pub mod texture2d;
 #[cfg(feature = "external-class-handle")]
