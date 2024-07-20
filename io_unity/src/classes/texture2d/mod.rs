@@ -138,6 +138,12 @@ pub trait Texture2DObject {
                     .ok_or(Error::Other("from_raw".to_owned()))?;
                 Ok(DynamicImage::ImageRgba8(result))
             }
+            TextureFormat::ARGB4444 => {
+                let buff: Vec<[u8; 2]> = data.into_iter().map(|f| [f, f]).collect();
+                let result = RgbaImage::from_raw(width as u32, height as u32, buff.concat())
+                    .ok_or(Error::Other("from_raw".to_owned()))?;
+                Ok(DynamicImage::ImageRgba8(result))
+            }
             _ => Err(Error::Other(format!(
                 "unsupport texture_format: {:?}",
                 self.get_texture_format()
