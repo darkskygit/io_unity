@@ -11,6 +11,27 @@ use num_enum::TryFromPrimitive;
 
 def_unity_class!(Texture2D);
 
+fn argb4444_to_rgba8888(input: &[u8]) -> Vec<u8> {
+    let mut output = Vec::with_capacity(input.len() * 2);
+
+    for chunk in input.chunks_exact(2) {
+        let packed = u16::from_le_bytes([chunk[0], chunk[1]]);
+        let a = (packed >> 12) & 0xF;
+        let r = (packed >> 8) & 0xF;
+        let g = (packed >> 4) & 0xF;
+        let b = packed & 0xF;
+
+        output.extend_from_slice(&[
+            (r * 17) as u8,
+            (g * 17) as u8,
+            (b * 17) as u8,
+            (a * 17) as u8,
+        ]);
+    }
+
+    output
+}
+
 pub trait Texture2DObject {
     fn get_width(&self) -> ReadResult<u64>;
     fn get_height(&self) -> ReadResult<u64>;
@@ -139,8 +160,8 @@ pub trait Texture2DObject {
                 Ok(DynamicImage::ImageRgba8(result))
             }
             TextureFormat::ARGB4444 => {
-                let buff: Vec<[u8; 2]> = data.into_iter().map(|f| [f, f]).collect();
-                let result = RgbaImage::from_raw(width as u32, height as u32, buff.concat())
+                let buff = argb4444_to_rgba8888(&data);
+                let result = RgbaImage::from_raw(width as u32, height as u32, buff)
                     .ok_or(Error::Other("from_raw".to_owned()))?;
                 Ok(DynamicImage::ImageRgba8(result))
             }
