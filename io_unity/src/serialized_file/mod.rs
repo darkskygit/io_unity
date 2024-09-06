@@ -21,10 +21,10 @@ pub mod version8;
 pub mod version9;
 
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::io::{prelude::*, SeekFrom};
+use std::sync::{Arc, Mutex};
 
 use binrw::BinRead;
 use binrw::{binrw, BinResult};
@@ -329,7 +329,7 @@ pub struct Object {
 
 pub struct SerializedFile {
     content: Box<dyn Serialized + Send + Sync>,
-    file_reader: RefCell<Box<dyn UnityResource + Send + Sync>>,
+    file_reader: Arc<Mutex<Box<dyn UnityResource + Send + Sync>>>,
     object_map: BTreeMap<i64, Object>,
     serialized_file_id: i64,
     pub resource_search_path: Option<String>,
@@ -422,7 +422,7 @@ impl SerializedFile {
         }
         Ok(SerializedFile {
             content: file,
-            file_reader: RefCell::new(reader),
+            file_reader: Arc::new(Mutex::new(reader)),
             object_map,
             serialized_file_id,
             resource_search_path,
@@ -439,7 +439,7 @@ impl SerializedFile {
             .map(|obj| {
                 self.content
                     .get_type_tree_object(
-                        &mut self.file_reader.borrow_mut(),
+                        &mut self.file_reader.lock().unwrap(),
                         obj,
                         self.serialized_file_id,
                         path_id,
