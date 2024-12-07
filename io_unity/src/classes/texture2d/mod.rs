@@ -66,6 +66,18 @@ pub trait Texture2DObject {
                     TextureFormat::DXT5 => {
                         texpresso::Format::Bc3.decompress(&data, width, height, &mut output)
                     }
+                    TextureFormat::DXT1Crunched | TextureFormat::DXT5Crunched => {
+                        let mut image: Vec<u32> = vec![0; (width * height) as usize];
+                        if let Err(e) =
+                            texture2ddecoder::decode_unity_crunch(&data, width, height, &mut image)
+                        {
+                            return Err(Error::Other(format!("decode_unity_crunch: {:?}", e)));
+                        }
+                        // convert Vec<u32> to Vec<u8>
+                        for pixel in image {
+                            output.extend_from_slice(&pixel.to_le_bytes());
+                        }
+                    }
 
                     TextureFormat::BC4 => {
                         texpresso::Format::Bc4.decompress(&data, width, height, &mut output)
@@ -73,10 +85,7 @@ pub trait Texture2DObject {
                     TextureFormat::BC5 => {
                         texpresso::Format::Bc5.decompress(&data, width, height, &mut output)
                     }
-                    TextureFormat::BC6H
-                    | TextureFormat::BC7
-                    | TextureFormat::DXT1Crunched
-                    | TextureFormat::DXT5Crunched => {
+                    TextureFormat::BC6H | TextureFormat::BC7 => {
                         return Err(Error::Other(format!(
                             "unsupport {:?}",
                             self.get_texture_format()

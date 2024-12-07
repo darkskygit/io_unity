@@ -78,7 +78,6 @@ fn main() -> anyhow::Result<()> {
     let mut unity_asset_viewer = UnityAssetViewer::new();
     if let Some(bundle_dir) = args.bundle_dir {
         unity_asset_viewer.read_bundle_dir(&bundle_dir)?;
-
     }
     if let Some(data_dir) = args.data_dir {
         unity_asset_viewer.read_data_dir(data_dir)?;
