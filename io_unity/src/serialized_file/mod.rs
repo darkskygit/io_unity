@@ -339,9 +339,7 @@ pub struct SerializedFile {
 
 impl fmt::Debug for SerializedFile {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    f.debug_struct("SerializedFile")
-      .field("content", &self.content)
-      .finish()
+    f.debug_struct("SerializedFile").field("content", &self.content).finish()
   }
 }
 
@@ -370,9 +368,7 @@ impl SerializedFile {
       SerializedFileFormatVersion::SupportsStrippedObject => Box::new(version15::SerializedFile::read(&mut reader)?),
       SerializedFileFormatVersion::RefactoredClassId => Box::new(version16::SerializedFile::read(&mut reader)?),
       SerializedFileFormatVersion::RefactorTypeData => Box::new(version17::SerializedFile::read(&mut reader)?),
-      SerializedFileFormatVersion::RefactorShareableTypeTreeData => {
-        Box::new(version17::SerializedFile::read(&mut reader)?)
-      }
+      SerializedFileFormatVersion::RefactorShareableTypeTreeData => Box::new(version17::SerializedFile::read(&mut reader)?),
       SerializedFileFormatVersion::TypeTreeNodeWithTypeFlags => Box::new(version19::SerializedFile::read(&mut reader)?),
       SerializedFileFormatVersion::SupportsRefObject => Box::new(version20::SerializedFile::read(&mut reader)?),
       SerializedFileFormatVersion::StoresTypeDependencies => Box::new(version21::SerializedFile::read(&mut reader)?),
@@ -402,12 +398,7 @@ impl SerializedFile {
       .map(|obj| {
         self
           .content
-          .get_type_tree_object(
-            &mut self.file_reader.lock().unwrap(),
-            obj,
-            self.serialized_file_id,
-            path_id,
-          )
+          .get_type_tree_object(&mut self.file_reader.lock().unwrap(), obj, self.serialized_file_id, path_id)
           .map_err(|err| Error::ObjectReadError {
             source: err.into(),
             data_offset: self.content.get_data_offset(),
@@ -462,10 +453,7 @@ pub trait Serialized: fmt::Debug {
     };
 
     #[cfg(feature = "type-tree-json")]
-    let class_args = class_args.or(get_type_object_args_by_version_class_id(
-      &self.get_unity_version(),
-      obj.class,
-    ));
+    let class_args = class_args.or(get_type_object_args_by_version_class_id(&self.get_unity_version(), obj.class));
 
     let class_args = class_args.ok_or(Error::TypeTreeObjectBinReadArgsBuild)?;
 
@@ -476,8 +464,7 @@ pub trait Serialized: fmt::Debug {
     let mut type_tree_object = TypeTreeObject::read_options(reader, self.get_endianess().into(), args)?;
     let apos = reader.stream_position()?;
     if apos - (self.get_data_offset() + obj.byte_start) != obj.byte_size as u64 {
-      let mut external_data =
-        vec![0u8; (obj.byte_size as u64 - (apos - (self.get_data_offset() + obj.byte_start))) as usize];
+      let mut external_data = vec![0u8; (obj.byte_size as u64 - (apos - (self.get_data_offset() + obj.byte_start))) as usize];
       reader.read_exact(&mut external_data)?;
       type_tree_object.external_data = Some(external_data);
     }

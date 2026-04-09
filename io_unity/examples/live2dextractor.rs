@@ -474,9 +474,7 @@ fn main() -> anyhow::Result<()> {
       for (container_path, _) in &unity_asset_viewer.container_maps {
         if container_path.starts_with(filter_path) {
           println!("Get {}", container_path);
-          let obj = unity_asset_viewer
-            .get_type_tree_object_by_container_name(container_path)?
-            .unwrap();
+          let obj = unity_asset_viewer.get_type_tree_object_by_container_name(container_path)?.unwrap();
           container_paths.push((container_path, obj.into()));
         }
       }
@@ -501,12 +499,7 @@ fn main() -> anyhow::Result<()> {
                   let script_pptr = PPtr::new(&pptr_o);
                   let script = script_pptr.get_type_tree_object_in_view(&unity_asset_viewer)?.unwrap();
                   if let Ok(class_name) = String::try_cast_from(&script, "/Base/m_ClassName") {
-                    parse_cubism_class(
-                      class_name,
-                      &component_obj,
-                      &mut cubism_physics3_json,
-                      &mut cubism_model3_json,
-                    );
+                    parse_cubism_class(class_name, &component_obj, &mut cubism_physics3_json, &mut cubism_model3_json);
                   }
                 }
               }
@@ -552,10 +545,7 @@ fn main() -> anyhow::Result<()> {
           let texture2d = if class_id == ClassIDType::Sprite as i32 {
             let tex_pptr = TypeTreeObjectRef::try_cast_from(&obj, "/Base/m_RD/texture").unwrap();
             let tex_pptr = PPtr::new(&tex_pptr);
-            tex_pptr
-              .get_type_tree_object_in_view(&unity_asset_viewer)?
-              .unwrap()
-              .into()
+            tex_pptr.get_type_tree_object_in_view(&unity_asset_viewer)?.unwrap().into()
           } else {
             obj
           };
@@ -588,8 +578,7 @@ fn main() -> anyhow::Result<()> {
           if stream_count == 0 && m_DenseClip_m_CurveCount == 0 {
             let mut cubism_exp3_json = CubismExp3Json::CubismExp3Json::new();
             let m_ConstantClip = TypeTreeObjectRef::try_cast_from(&m_Clip, "/Base/data/m_ConstantClip").unwrap();
-            let m_ConstantClip_data =
-              <Vec<f32>>::try_cast_from(&m_ConstantClip, "/Base/data/Array").unwrap_or(Vec::new());
+            let m_ConstantClip_data = <Vec<f32>>::try_cast_from(&m_ConstantClip, "/Base/data/Array").unwrap_or(Vec::new());
             // println!("{:?}", &m_ConstantClip_data);
             for curve_index in 0..m_ConstantClip_data.len() {
               let index = curve_index;
@@ -615,13 +604,11 @@ fn main() -> anyhow::Result<()> {
           cubism_motion3_json.Meta.FadeOutTime = 1.0;
 
           let streamed_frames = TypeTreeObjectRef::try_cast_from(&m_Clip, "/Base/data/m_StreamedClip").unwrap();
-          let streamed_clip_buff =
-            <Vec<u32>>::try_cast_from(&streamed_frames, "/Base/data/Array").unwrap_or(Vec::new());
+          let streamed_clip_buff = <Vec<u32>>::try_cast_from(&streamed_frames, "/Base/data/Array").unwrap_or(Vec::new());
           let streamed_frames = streamed_clip_read_u32_buff(&streamed_clip_buff).unwrap();
 
           for curve_index in 0..stream_count {
-            let binding =
-              animation_clip_binding_constant_find_binding(&m_ClipBindingConstant, curve_index as usize).unwrap();
+            let binding = animation_clip_binding_constant_find_binding(&m_ClipBindingConstant, curve_index as usize).unwrap();
             let (live2d_target, live2d_id) = get_live2d_path(&unity_asset_viewer, &path_hash_map, &binding);
             let mut keyframe_curve = KeyframeCurve::default();
             keyframe_curve.target = live2d_target;
@@ -647,8 +634,7 @@ fn main() -> anyhow::Result<()> {
           let m_DenseClip_m_BeginTime = f32::try_cast_from(&m_DenseClip, "/Base/m_BeginTime").unwrap();
           let m_DenseClip_m_SampleRate = f32::try_cast_from(&m_DenseClip, "/Base/m_SampleRate").unwrap();
           let m_DenseClip_m_FrameCount = i64::try_cast_from(&m_DenseClip, "/Base/m_FrameCount").unwrap();
-          let m_DenseClip_m_SampleArray =
-            <Vec<f32>>::try_cast_from(&m_DenseClip, "/Base/m_SampleArray/Array").unwrap_or(Vec::new());
+          let m_DenseClip_m_SampleArray = <Vec<f32>>::try_cast_from(&m_DenseClip, "/Base/m_SampleArray/Array").unwrap_or(Vec::new());
           for curve_index in 0..m_DenseClip_m_CurveCount {
             let index = stream_count + curve_index;
 
@@ -673,8 +659,7 @@ fn main() -> anyhow::Result<()> {
           let m_ConstantClip = TypeTreeObjectRef::try_cast_from(&m_Clip, "/Base/data/m_ConstantClip").unwrap();
           let denseCount = m_DenseClip_m_CurveCount;
           let time_end = f32::try_cast_from(&obj, "/Base/m_MuscleClip/m_StopTime").unwrap();
-          let m_ConstantClip_data =
-            <Vec<f32>>::try_cast_from(&m_ConstantClip, "/Base/data/Array").unwrap_or(Vec::new());
+          let m_ConstantClip_data = <Vec<f32>>::try_cast_from(&m_ConstantClip, "/Base/data/Array").unwrap_or(Vec::new());
           // println!("{:?}", &m_ConstantClip_data);
           for curve_index in 0..m_ConstantClip_data.len() {
             let index = stream_count + denseCount + curve_index as u64;
@@ -743,9 +728,7 @@ fn main() -> anyhow::Result<()> {
                 let tangent_length = (keyframe.time - pre_keyframe.time) / 3.0;
                 curve.Segments.push(1.0);
                 curve.Segments.push(pre_keyframe.time + tangent_length);
-                curve
-                  .Segments
-                  .push(pre_keyframe.out_slope * tangent_length + pre_keyframe.value);
+                curve.Segments.push(pre_keyframe.out_slope * tangent_length + pre_keyframe.value);
                 curve.Segments.push(keyframe.time - tangent_length);
                 curve.Segments.push(keyframe.value - keyframe.in_slope * tangent_length);
                 curve.Segments.push(keyframe.time);
@@ -798,9 +781,7 @@ fn main() -> anyhow::Result<()> {
 
         create_dir_all(cubism_model3_dir_path.join("motions"));
         for (motion_name, cubism_motion3_json) in cubism_motion3_json_map {
-          let cubism_motion3_json_path = cubism_model3_dir_path
-            .join("motions")
-            .join(motion_name.clone() + ".motion3.json");
+          let cubism_motion3_json_path = cubism_model3_dir_path.join("motions").join(motion_name.clone() + ".motion3.json");
           println!("writing {:?}", &cubism_motion3_json_path);
           let motion_json_file = File::create(cubism_motion3_json_path)?;
           serde_json::to_writer(motion_json_file, &cubism_motion3_json)?;
@@ -814,9 +795,7 @@ fn main() -> anyhow::Result<()> {
 
         create_dir_all(cubism_model3_dir_path.join("expressions"));
         for (exp_name, cubism_exp3_json) in cubism_exp3_json_map {
-          let cubism_exp3_json_path = cubism_model3_dir_path
-            .join("expressions")
-            .join(exp_name.clone() + ".exp3.json");
+          let cubism_exp3_json_path = cubism_model3_dir_path.join("expressions").join(exp_name.clone() + ".exp3.json");
           println!("writing {:?}", &cubism_exp3_json_path);
           let exp_json_file = File::create(cubism_exp3_json_path)?;
           serde_json::to_writer(exp_json_file, &cubism_exp3_json)?;
@@ -854,18 +833,12 @@ fn parse_cubism_class(
     {
       let mut physics_setting = CubismPhysics3Json::SerializablePhysicsSettings::default();
       physics_setting.Id = format!("PhysicsSetting{}", i + 1);
-      physics_setting.Normalization.Position.Default =
-        f32::try_cast_from(sub_rig, "/Base/Normalization/Position/Default").unwrap();
-      physics_setting.Normalization.Position.Minimum =
-        f32::try_cast_from(sub_rig, "/Base/Normalization/Position/Minimum").unwrap();
-      physics_setting.Normalization.Position.Maximum =
-        f32::try_cast_from(sub_rig, "/Base/Normalization/Position/Maximum").unwrap();
-      physics_setting.Normalization.Angle.Default =
-        f32::try_cast_from(sub_rig, "/Base/Normalization/Angle/Default").unwrap();
-      physics_setting.Normalization.Angle.Minimum =
-        f32::try_cast_from(sub_rig, "/Base/Normalization/Angle/Minimum").unwrap();
-      physics_setting.Normalization.Angle.Maximum =
-        f32::try_cast_from(sub_rig, "/Base/Normalization/Angle/Maximum").unwrap();
+      physics_setting.Normalization.Position.Default = f32::try_cast_from(sub_rig, "/Base/Normalization/Position/Default").unwrap();
+      physics_setting.Normalization.Position.Minimum = f32::try_cast_from(sub_rig, "/Base/Normalization/Position/Minimum").unwrap();
+      physics_setting.Normalization.Position.Maximum = f32::try_cast_from(sub_rig, "/Base/Normalization/Position/Maximum").unwrap();
+      physics_setting.Normalization.Angle.Default = f32::try_cast_from(sub_rig, "/Base/Normalization/Angle/Default").unwrap();
+      physics_setting.Normalization.Angle.Minimum = f32::try_cast_from(sub_rig, "/Base/Normalization/Angle/Minimum").unwrap();
+      physics_setting.Normalization.Angle.Maximum = f32::try_cast_from(sub_rig, "/Base/Normalization/Angle/Maximum").unwrap();
 
       for input in <Vec<TypeTreeObjectRef>>::try_cast_from(sub_rig, "/Base/Input/Array").unwrap() {
         let mut serializable_input = CubismPhysics3Json::SerializableInput::default();
@@ -911,16 +884,8 @@ fn parse_cubism_class(
       cubism_physics3_json_m.PhysicsSettings.push(physics_setting);
     }
     cubism_physics3_json_m.Meta.PhysicsSettingCount = cubism_physics3_json_m.PhysicsSettings.len() as i32;
-    cubism_physics3_json_m.Meta.TotalInputCount = cubism_physics3_json_m
-      .PhysicsSettings
-      .iter()
-      .map(|o| o.Input.len())
-      .sum::<usize>() as i32;
-    cubism_physics3_json_m.Meta.TotalOutputCount = cubism_physics3_json_m
-      .PhysicsSettings
-      .iter()
-      .map(|o| o.Output.len())
-      .sum::<usize>() as i32;
+    cubism_physics3_json_m.Meta.TotalInputCount = cubism_physics3_json_m.PhysicsSettings.iter().map(|o| o.Input.len()).sum::<usize>() as i32;
+    cubism_physics3_json_m.Meta.TotalOutputCount = cubism_physics3_json_m.PhysicsSettings.iter().map(|o| o.Output.len()).sum::<usize>() as i32;
     cubism_physics3_json_m.Meta.TotalVertexCount = cubism_physics3_json_m
       .PhysicsSettings
       .iter()
@@ -946,11 +911,7 @@ fn parse_cubism_class(
 }
 
 // (target,id)
-fn get_live2d_path(
-  viewer: &UnityAssetViewer,
-  path_hash_map: &BTreeMap<u32, String>,
-  binding: &TypeTreeObjectRef,
-) -> (String, String) {
+fn get_live2d_path(viewer: &UnityAssetViewer, path_hash_map: &BTreeMap<u32, String>, binding: &TypeTreeObjectRef) -> (String, String) {
   let path = u64::try_cast_from(binding, "/Base/path").unwrap() as u32;
   let string_path = path_hash_map.get(&path);
   if path != 0 && string_path.is_some() {

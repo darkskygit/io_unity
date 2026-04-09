@@ -57,11 +57,7 @@ impl MeshObject for Mesh<'_> {
     let vertex_data: VertexData = (&vertex_data_obj).cast_as();
 
     Ok(
-      match vertex_data.get_channel_stream_buff(
-        &ChannelType::kShaderChannelVertex,
-        &sub_mesh,
-        self.inner.get_endian(),
-      )? {
+      match vertex_data.get_channel_stream_buff(&ChannelType::kShaderChannelVertex, &sub_mesh, self.inner.get_endian())? {
         StreamBuff::Float(buff) => buff,
         _ => unreachable!(),
       }
@@ -79,11 +75,7 @@ impl MeshObject for Mesh<'_> {
     let vertex_data: VertexData = (&vertex_data_obj).cast_as();
 
     Ok(
-      match vertex_data.get_channel_stream_buff(
-        &ChannelType::kShaderChannelNormal,
-        &sub_mesh,
-        self.inner.get_endian(),
-      )? {
+      match vertex_data.get_channel_stream_buff(&ChannelType::kShaderChannelNormal, &sub_mesh, self.inner.get_endian())? {
         StreamBuff::Float(buff) => buff,
         _ => unreachable!(),
       }
@@ -102,11 +94,7 @@ impl MeshObject for Mesh<'_> {
     let vertex_data: VertexData = (&vertex_data_obj).cast_as();
 
     Ok(
-      match vertex_data.get_channel_stream_buff(
-        &ChannelType::kShaderChannelTexCoord0,
-        &sub_mesh,
-        self.inner.get_endian(),
-      )? {
+      match vertex_data.get_channel_stream_buff(&ChannelType::kShaderChannelTexCoord0, &sub_mesh, self.inner.get_endian())? {
         StreamBuff::Float(buff) => buff,
         _ => unreachable!(),
       }
@@ -123,22 +111,15 @@ impl MeshObject for Mesh<'_> {
     let vertex_data_obj = self.get_vertex_data()?;
     let vertex_data: VertexData = (&vertex_data_obj).cast_as();
 
-    let weight_buff = match vertex_data.get_channel_stream_buff(
-      &ChannelType::kShaderChannelBlendWeight,
-      &sub_mesh,
-      self.inner.get_endian(),
-    )? {
+    let weight_buff = match vertex_data.get_channel_stream_buff(&ChannelType::kShaderChannelBlendWeight, &sub_mesh, self.inner.get_endian())? {
       StreamBuff::Float(buff) => buff,
       _ => unreachable!(),
     };
-    let bone_index_buff = match vertex_data.get_channel_stream_buff(
-      &ChannelType::kShaderChannelBlendIndices,
-      &sub_mesh,
-      self.inner.get_endian(),
-    )? {
-      StreamBuff::I64(buff) => buff,
-      _ => unreachable!(),
-    };
+    let bone_index_buff =
+      match vertex_data.get_channel_stream_buff(&ChannelType::kShaderChannelBlendIndices, &sub_mesh, self.inner.get_endian())? {
+        StreamBuff::I64(buff) => buff,
+        _ => unreachable!(),
+      };
 
     let mut buff = Vec::new();
     for (weight, bone_index) in weight_buff.into_iter().zip(bone_index_buff) {
@@ -244,12 +225,7 @@ impl VertexData<'_> {
     Ok(stride as usize)
   }
 
-  fn get_channel_stream_buff(
-    &self,
-    channel: &ChannelType,
-    sub_mesh: &SubMesh,
-    endian: binrw::Endian,
-  ) -> ReadResult<StreamBuff> {
+  fn get_channel_stream_buff(&self, channel: &ChannelType, sub_mesh: &SubMesh, endian: binrw::Endian) -> ReadResult<StreamBuff> {
     let channel = &self.get_channels()?[channel.clone() as u8 as usize];
     let channel: Channel = channel.cast_as();
 
@@ -362,9 +338,7 @@ impl VertexData<'_> {
 
     let mut buff = vec![];
     for i in sub_mesh.get_first_vertex()?..sub_mesh.get_vertex_count()? + sub_mesh.get_first_vertex()? {
-      reader.seek(SeekFrom::Start(
-        offset as u64 + i * stride as u64 + channel.get_offset()?,
-      ))?;
+      reader.seek(SeekFrom::Start(offset as u64 + i * stride as u64 + channel.get_offset()?))?;
       let sbuff = <Vec<T>>::read_options(
         &mut reader,
         endian,

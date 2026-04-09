@@ -31,8 +31,8 @@ impl Texture2DObject for Texture2D<'_> {
       }
     }
 
-    if let Some(mut file) = viewer
-      .get_resource_file_by_serialized_file_id_and_path(self.get_serialized_file_id(), &self.get_stream_data_path()?)
+    if let Some(mut file) =
+      viewer.get_resource_file_by_serialized_file_id_and_path(self.get_serialized_file_id(), &self.get_stream_data_path()?)
     {
       file.seek(SeekFrom::Start(self.get_stream_data_offset()?))?;
       let mut data = vec![0u8; self.get_stream_data_size()? as usize];

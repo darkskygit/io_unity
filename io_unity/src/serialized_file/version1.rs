@@ -3,8 +3,8 @@ use std::{borrow::Cow, sync::Arc};
 use binrw::{NullString, binrw};
 
 use super::{
-  BuildTarget, Serialized, SerializedFileCommonHeader, SerializedFileFormatVersion, version4::FileIdentifier,
-  version6::Object, version11::TypeTreeNode,
+  BuildTarget, Serialized, SerializedFileCommonHeader, SerializedFileFormatVersion, version4::FileIdentifier, version6::Object,
+  version11::TypeTreeNode,
 };
 use crate::{
   type_tree::{TypeField, reader::TypeTreeObjectBinReadClassArgs},

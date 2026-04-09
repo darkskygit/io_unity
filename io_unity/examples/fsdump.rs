@@ -148,10 +148,7 @@ fn main() -> anyhow::Result<()> {
       println!("object_types : {:?}", object_types);
       println!("mono_behaviour_calss_types : {:?}", mono_behaviour_calss_types);
     }
-    Commands::Extract {
-      filter_path: _,
-      out_dir,
-    } => {
+    Commands::Extract { filter_path: _, out_dir } => {
       let gen_out_path = |container_name: &Option<&String>, name: &Result<String, _>, ext| {
         let mut out_path_base = PathBuf::from(out_dir);
         let out_path = if let Some(container_name) = container_name {
@@ -161,11 +158,7 @@ fn main() -> anyhow::Result<()> {
             out_path_base.join(container_name.to_string() + ext)
           }
         } else {
-          let out_file_name = if let Ok(name) = name {
-            name.to_owned()
-          } else {
-            "data".to_owned()
-          };
+          let out_file_name = if let Ok(name) = name { name.to_owned() } else { "data".to_owned() };
           let mut out_path = out_path_base.clone();
           let mut f_out_file_name = out_file_name.clone();
           let mut i = 0;
@@ -197,8 +190,7 @@ fn main() -> anyhow::Result<()> {
             .unwrap()
             .unwrap();
 
-          let container_name =
-            unity_asset_viewer.get_container_name_by_serialized_file_id_and_path_id(*serialized_file_id, *path_id);
+          let container_name = unity_asset_viewer.get_container_name_by_serialized_file_id_and_path_id(*serialized_file_id, *path_id);
 
           let name = String::try_cast_from(&obj, "/Base/m_Name");
 

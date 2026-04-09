@@ -19,11 +19,7 @@ pub trait MeshObject {
 pub fn get_format_size(format: VertexFormat) -> u8 {
   match format {
     VertexFormat::UNorm8 | VertexFormat::SNorm8 | VertexFormat::UInt8 | VertexFormat::SInt8 => 1,
-    VertexFormat::UInt16
-    | VertexFormat::SInt16
-    | VertexFormat::UNorm16
-    | VertexFormat::SNorm16
-    | VertexFormat::Float16 => 2,
+    VertexFormat::UInt16 | VertexFormat::SInt16 | VertexFormat::UNorm16 | VertexFormat::SNorm16 | VertexFormat::Float16 => 2,
     VertexFormat::Float | VertexFormat::UInt32 | VertexFormat::SInt32 => 4,
   }
 }

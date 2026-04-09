@@ -118,9 +118,8 @@ impl TypeField for TypeTreeNode {
 
 static INFO_JSON_TAR_READER: Lazy<Mutex<Option<Box<dyn UnityResource + Send + Sync>>>> = Lazy::new(|| Mutex::new(None));
 static INFO_JSON_CACHE_MAP: Lazy<Mutex<HashMap<String, InfoJson::InfoJson>>> = Lazy::new(|| Mutex::new(HashMap::new()));
-static TYPE_TREE_OBJECT_BIN_READ_CLASS_ARGS_CACHE_MAP: Lazy<
-  Mutex<HashMap<String, BTreeMap<i32, TypeTreeObjectBinReadClassArgs>>>,
-> = Lazy::new(|| Mutex::new(HashMap::new()));
+static TYPE_TREE_OBJECT_BIN_READ_CLASS_ARGS_CACHE_MAP: Lazy<Mutex<HashMap<String, BTreeMap<i32, TypeTreeObjectBinReadClassArgs>>>> =
+  Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// The tar zstd compressed file contain type tree info json files
 /// for read file without typetree info.
@@ -151,8 +150,7 @@ fn read_info_json_by_version(version: &String) -> ReadResult<InfoJson::InfoJson>
         if let Some(path) = file.header().path()?.to_str() {
           if path == json_path {
             // files implement the Read trait
-            let info_json: InfoJson::InfoJson =
-              serde_json::from_reader(file).map_err(|e| Error::Other(e.to_string()))?;
+            let info_json: InfoJson::InfoJson = serde_json::from_reader(file).map_err(|e| Error::Other(e.to_string()))?;
             return Ok(info_json);
           }
         }
@@ -162,10 +160,7 @@ fn read_info_json_by_version(version: &String) -> ReadResult<InfoJson::InfoJson>
   Err(Error::Other(format!("cannot find json file for version {version:?}")))
 }
 
-pub fn get_type_object_args_by_version_class_id(
-  version: &String,
-  class_id: i32,
-) -> Option<TypeTreeObjectBinReadClassArgs> {
+pub fn get_type_object_args_by_version_class_id(version: &String, class_id: i32) -> Option<TypeTreeObjectBinReadClassArgs> {
   if let Ok(type_tree_object_bin_read_class_args_cache_map) = TYPE_TREE_OBJECT_BIN_READ_CLASS_ARGS_CACHE_MAP.lock() {
     if let Some(class_map) = type_tree_object_bin_read_class_args_cache_map.get(version) {
       if let Some(read_args) = class_map.get(&class_id) {
@@ -211,9 +206,7 @@ pub fn get_type_object_args_by_version_class_id(
           .collect();
         let read_args = TypeTreeObjectBinReadClassArgs::new(class_id, type_fields);
 
-        if let Ok(mut type_tree_object_bin_read_class_args_cache_map) =
-          TYPE_TREE_OBJECT_BIN_READ_CLASS_ARGS_CACHE_MAP.lock()
-        {
+        if let Ok(mut type_tree_object_bin_read_class_args_cache_map) = TYPE_TREE_OBJECT_BIN_READ_CLASS_ARGS_CACHE_MAP.lock() {
           if let Some(class_map) = type_tree_object_bin_read_class_args_cache_map.get_mut(version) {
             class_map.insert(class_id, read_args.clone());
           } else {

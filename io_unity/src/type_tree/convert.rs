@@ -18,21 +18,13 @@ pub struct FieldCastArgs {
 pub trait TryRead<T>: Sized {
   type Error;
 
-  fn try_read_to<R: Read + Seek>(
-    &self,
-    object_data_reader: &mut R,
-    field_cast_args: &FieldCastArgs,
-  ) -> Result<T, Self::Error>;
+  fn try_read_to<R: Read + Seek>(&self, object_data_reader: &mut R, field_cast_args: &FieldCastArgs) -> Result<T, Self::Error>;
 }
 
 impl TryRead<i32> for Field {
   type Error = Error;
 
-  fn try_read_to<R: Read + Seek>(
-    &self,
-    object_data_reader: &mut R,
-    field_cast_args: &FieldCastArgs,
-  ) -> Result<i32, Self::Error> {
+  fn try_read_to<R: Read + Seek>(&self, object_data_reader: &mut R, field_cast_args: &FieldCastArgs) -> Result<i32, Self::Error> {
     if ["SInt32", "int"].contains(&self.field_type.get_type().as_str()) {
       return Ok(<i32>::read_options(object_data_reader, field_cast_args.endian, ())?);
     }
@@ -62,11 +54,7 @@ where
   type Error = Error;
 
   fn try_cast_from(value: E, path: &str) -> Result<Self, Self::Error> {
-    let path: Vec<String> = path
-      .split('/')
-      .filter(|s| !s.is_empty())
-      .map(|s| s.to_string())
-      .collect();
+    let path: Vec<String> = path.split('/').filter(|s| !s.is_empty()).map(|s| s.to_string()).collect();
     <T>::try_cast_from(value, &path[1..])
   }
 }
@@ -187,17 +175,11 @@ impl TryCastFrom<&TypeTreeObjectRef, &[String]> for HashMap<String, TypeTreeObje
 }
 
 #[inline]
-fn gen_reader<'a>(
-  object_data_buff: &'a [u8],
-  data_offset: &DataOffset,
-  field_cast_args: &FieldCastArgs,
-) -> ReadResult<Cursor<&'a [u8]>> {
+fn gen_reader<'a>(object_data_buff: &'a [u8], data_offset: &DataOffset, field_cast_args: &FieldCastArgs) -> ReadResult<Cursor<&'a [u8]>> {
   let mut reader = Cursor::new(object_data_buff);
   match data_offset {
     DataOffset::AbsDataOffset(data) => reader.set_position(*data),
-    DataOffset::ArrayItemOffset(data) => {
-      reader.set_position(*data + field_cast_args.field_offset.ok_or(Error::ArrayItemOffsetError)? as u64)
-    }
+    DataOffset::ArrayItemOffset(data) => reader.set_position(*data + field_cast_args.field_offset.ok_or(Error::ArrayItemOffsetError)? as u64),
   }
   Ok(reader)
 }

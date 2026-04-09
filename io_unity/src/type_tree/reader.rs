@@ -54,9 +54,7 @@ impl BinRead for TypeTreeObject {
       read_offset: &mut u64,
       is_fix_size_array_item: bool,
     ) -> BinResult<Field> {
-      let field = type_fields
-        .get(*field_index)
-        .ok_or(std::io::Error::from(ErrorKind::NotFound))?;
+      let field = type_fields.get(*field_index).ok_or(std::io::Error::from(ErrorKind::NotFound))?;
       let field_level = field.get_level();
       let field_value = if field.is_array() {
         assert!(!is_fix_size_array_item);
@@ -76,9 +74,7 @@ impl BinRead for TypeTreeObject {
 
         *field_index += 1;
         let item_field_index = *field_index;
-        let item_type_field = type_fields
-          .get(item_field_index)
-          .ok_or(std::io::Error::from(ErrorKind::NotFound))?;
+        let item_type_field = type_fields.get(item_field_index).ok_or(std::io::Error::from(ErrorKind::NotFound))?;
         let item_level = item_type_field.get_level();
         let mut item_type_fields = Vec::new();
         item_type_fields.push(item_type_field.clone());
@@ -96,9 +92,7 @@ impl BinRead for TypeTreeObject {
         let fix_item_size = calc_no_array_field_size(&item_type_fields, &mut 0, &mut 0);
         let mut buf_read_flag = false;
         if let Some(byte_size) = fix_item_size {
-          if (is_pos_aligned && ((byte_size % 4) == 0))
-            || (item_type_fields.len() == 1 && !item_type_fields.get(0).unwrap().is_align())
-          {
+          if (is_pos_aligned && ((byte_size % 4) == 0)) || (item_type_fields.len() == 1 && !item_type_fields.get(0).unwrap().is_align()) {
             buf_read_flag = true;
           }
         }
@@ -152,14 +146,7 @@ impl BinRead for TypeTreeObject {
           while let Some(next_field) = type_fields.get(*field_index + 1) {
             if next_field.get_level() == field_level + 1 {
               *field_index += 1;
-              let field_data = read(
-                reader,
-                endian,
-                type_fields,
-                field_index,
-                read_offset,
-                is_fix_size_array_item,
-              )?;
+              let field_data = read(reader, endian, type_fields, field_index, read_offset, is_fix_size_array_item)?;
               fields.insert(field_data.get_name().clone(), field_data);
             } else if next_field.get_level() <= field_level {
               break;

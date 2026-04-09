@@ -77,9 +77,7 @@ impl Field {
       FieldValue::DataOffset(data_offset) => {
         let pos = match data_offset {
           DataOffset::AbsDataOffset(data) => *data,
-          DataOffset::ArrayItemOffset(data) => {
-            *data + offset.ok_or(Error::AsSliceError("ArrayItemOffset use without field offset."))? as u64
-          }
+          DataOffset::ArrayItemOffset(data) => *data + offset.ok_or(Error::AsSliceError("ArrayItemOffset use without field offset."))? as u64,
         };
         let size = self.field_type.get_byte_size() as u64;
         (pos, size)
@@ -186,12 +184,7 @@ impl Field {
     }
   }
 
-  fn get_field(
-    &self,
-    path: &[String],
-    field_offset: Option<i64>,
-    type_tree_object: &TypeTreeObject,
-  ) -> Option<(&Self, Option<i64>)> {
+  fn get_field(&self, path: &[String], field_offset: Option<i64>, type_tree_object: &TypeTreeObject) -> Option<(&Self, Option<i64>)> {
     if path.is_empty() {
       return Some((self, field_offset));
     } else {
@@ -221,11 +214,7 @@ impl Field {
                   if size <= index {
                     return None;
                   }
-                  return field.get_field(
-                    path,
-                    Some((*offset + item_size * index as u64) as i64),
-                    type_tree_object,
-                  );
+                  return field.get_field(path, Some((*offset + item_size * index as u64) as i64), type_tree_object);
                 }
                 ArrayFieldValue::ArrayItems(items) => {
                   if let Some(field) = items.get(index as usize) {
@@ -275,18 +264,11 @@ impl TypeTreeObject {
   }
 
   pub(super) fn get_field_by_path(&self, path: &str) -> ReadResult<(&Field, Option<i64>)> {
-    let path: Vec<String> = path
-      .split('/')
-      .filter(|s| !s.is_empty())
-      .map(|s| s.to_string())
-      .collect();
+    let path: Vec<String> = path.split('/').filter(|s| !s.is_empty()).map(|s| s.to_string()).collect();
     if path.len() <= 1 {
       return Err(Error::FieldNotFound(path));
     }
-    self
-      .data_layout
-      .get_field(&path[1..], None, self)
-      .ok_or(Error::FieldNotFound(path))
+    self.data_layout.get_field(&path[1..], None, self).ok_or(Error::FieldNotFound(path))
   }
 
   pub(super) fn get_field_by_path_list(&self, path: &[String]) -> Option<(&Field, Option<i64>)> {

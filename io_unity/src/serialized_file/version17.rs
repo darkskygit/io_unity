@@ -46,12 +46,7 @@ impl Serialized for SerializedFile {
         path_id: obj.path_id,
         byte_start: obj.byte_start as u64,
         byte_size: obj.byte_size,
-        class: self
-          .content
-          .types
-          .get(obj.type_id as usize)
-          .map(|t| t.class_id)
-          .unwrap_or(0),
+        class: self.content.types.get(obj.type_id as usize).map(|t| t.class_id).unwrap_or(0),
         type_id: obj.type_id as usize,
       })
       .collect()

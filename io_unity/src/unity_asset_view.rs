@@ -66,9 +66,7 @@ impl UnityAssetViewer {
       // ));
 
       let serialized_file_id = self.add_serialized_file(cab_buff_reader, None)?;
-      self
-        .serialized_file_to_unity_fs_map
-        .insert(serialized_file_id, unity_fs_id);
+      self.serialized_file_to_unity_fs_map.insert(serialized_file_id, unity_fs_id);
       self.cab_maps.insert(cab_path, serialized_file_id);
     }
     self.unity_fs_map.insert(unity_fs_id, unity_fs);
@@ -85,9 +83,7 @@ impl UnityAssetViewer {
 
     let serialized_file = SerializedFile::read(serialized_file_reader, serialized_file_id, resource_search_path)?;
     if let Ok(Some(asset_bundle)) = serialized_file.get_tt_object_by_path_id(1) {
-      if let Ok(containers) =
-        <HashMap<String, TypeTreeObjectRef>>::try_cast_from(&asset_bundle.into(), "/Base/m_Container/Array")
-      {
+      if let Ok(containers) = <HashMap<String, TypeTreeObjectRef>>::try_cast_from(&asset_bundle.into(), "/Base/m_Container/Array") {
         let mut name_map = HashMap::new();
         for (name, asset_info) in containers {
           if let Ok(pptr) = TypeTreeObjectRef::try_cast_from(&asset_info, "/Base/asset") {
@@ -109,9 +105,7 @@ impl UnityAssetViewer {
     for (path_id, obj) in serialized_file.get_object_map() {
       if obj.class == ClassIDType::ResourceManager as i32 {
         if let Ok(Some(resource_manager)) = serialized_file.get_tt_object_by_path_id(*path_id) {
-          if let Ok(containers) =
-            <HashMap<String, TypeTreeObjectRef>>::try_cast_from(&resource_manager.into(), "/Base/m_Container/Array")
-          {
+          if let Ok(containers) = <HashMap<String, TypeTreeObjectRef>>::try_cast_from(&resource_manager.into(), "/Base/m_Container/Array") {
             let mut name_map = HashMap::new();
             for (name, pptr) in containers {
               if let Ok(path_id) = PPtr::new(&pptr).get_path_id() {
@@ -137,10 +131,7 @@ impl UnityAssetViewer {
   pub fn read_data_dir<P: AsRef<Path>>(&mut self, data_dir_path: P) -> ReadResult<()> {
     for i in 0..u8::MAX {
       let file_name = format!("level{i}");
-      if let Ok(file) = OpenOptions::new()
-        .read(true)
-        .open(data_dir_path.as_ref().join(&file_name))
-      {
+      if let Ok(file) = OpenOptions::new().read(true).open(data_dir_path.as_ref().join(&file_name)) {
         let serialized_file_id = self.add_serialized_file(
           Box::new(BufReader::new(file)),
           Some(data_dir_path.as_ref().to_string_lossy().to_string()),
@@ -152,10 +143,7 @@ impl UnityAssetViewer {
     }
     for i in 0..u8::MAX {
       let file_name = format!("sharedassets{i}.assets");
-      if let Ok(file) = OpenOptions::new()
-        .read(true)
-        .open(data_dir_path.as_ref().join(&file_name))
-      {
+      if let Ok(file) = OpenOptions::new().read(true).open(data_dir_path.as_ref().join(&file_name)) {
         let serialized_file_id = self.add_serialized_file(
           Box::new(BufReader::new(file)),
           Some(data_dir_path.as_ref().to_string_lossy().to_string()),
@@ -168,10 +156,7 @@ impl UnityAssetViewer {
 
     let file_names = ["resources.assets", "globalgamemanagers.assets", "globalgamemanagers"];
     for file_name in file_names {
-      if let Ok(file) = OpenOptions::new()
-        .read(true)
-        .open(data_dir_path.as_ref().join(file_name))
-      {
+      if let Ok(file) = OpenOptions::new().read(true).open(data_dir_path.as_ref().join(file_name)) {
         let serialized_file_id = self.add_serialized_file(
           Box::new(BufReader::new(file)),
           Some(data_dir_path.as_ref().to_string_lossy().to_string()),
@@ -203,10 +188,7 @@ impl UnityAssetViewer {
   }
 
   pub fn get_unity_fs_by_serialized_file(&self, serialized_file: &SerializedFile) -> Option<&UnityFS> {
-    if let Some(unity_fs_id) = self
-      .serialized_file_to_unity_fs_map
-      .get(&serialized_file.get_serialized_file_id())
-    {
+    if let Some(unity_fs_id) = self.serialized_file_to_unity_fs_map.get(&serialized_file.get_serialized_file_id()) {
       if let Some(unity_fs) = self.unity_fs_map.get(unity_fs_id) {
         return Some(unity_fs);
       }
@@ -226,10 +208,7 @@ impl UnityAssetViewer {
   }
 
   pub fn get_unity_fs_by_type_tree_object(&self, type_tree_object: &TypeTreeObject) -> Option<&UnityFS> {
-    if let Some(unity_fs_id) = self
-      .serialized_file_to_unity_fs_map
-      .get(&type_tree_object.serialized_file_id)
-    {
+    if let Some(unity_fs_id) = self.serialized_file_to_unity_fs_map.get(&type_tree_object.serialized_file_id) {
       if let Some(unity_fs) = self.unity_fs_map.get(unity_fs_id) {
         return Some(unity_fs);
       }
@@ -246,11 +225,7 @@ impl UnityAssetViewer {
     None
   }
 
-  pub fn get_container_name_by_serialized_file_id_and_path_id(
-    &self,
-    serialized_file_id: i64,
-    path_id: i64,
-  ) -> Option<&String> {
+  pub fn get_container_name_by_serialized_file_id_and_path_id(&self, serialized_file_id: i64, path_id: i64) -> Option<&String> {
     if let Some(name_map) = self.container_name_maps.get(&serialized_file_id) {
       return name_map.get(&path_id);
     }
@@ -287,11 +262,7 @@ impl UnityAssetViewer {
     None
   }
 
-  pub fn get_resource_file_by_serialized_file_id_and_path(
-    &self,
-    serialized_file_id: i64,
-    path: &String,
-  ) -> Option<Box<dyn UnityResource>> {
+  pub fn get_resource_file_by_serialized_file_id_and_path(&self, serialized_file_id: i64, path: &String) -> Option<Box<dyn UnityResource>> {
     get_resource_file_by_path(
       path,
       self.serialized_file_map.get(&serialized_file_id),
@@ -310,10 +281,7 @@ pub fn get_resource_file_by_path(
   unityfs: Option<&UnityFS>,
   search_path: Option<&String>,
 ) -> Option<Box<dyn UnityResource>> {
-  if let Some(file_name) = PathBuf::from(&path)
-    .file_name()
-    .map(|f| f.to_string_lossy().into_owned())
-  {
+  if let Some(file_name) = PathBuf::from(&path).file_name().map(|f| f.to_string_lossy().into_owned()) {
     if path.starts_with("archive:/") {
       if let Some(unityfs) = unityfs {
         if let Some(file_reader) = unityfs.get_file_reader_by_path(&file_name) {

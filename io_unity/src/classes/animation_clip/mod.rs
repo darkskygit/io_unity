@@ -93,9 +93,7 @@ pub fn animation_clip_binding_constant_find_binding(
   index: usize,
 ) -> Option<TypeTreeObjectRef> {
   let mut curves = 0;
-  for b in
-    <Vec<TypeTreeObjectRef>>::try_cast_from(animation_clip_binding_constant, "/Base/genericBindings/Array").unwrap()
-  {
+  for b in <Vec<TypeTreeObjectRef>>::try_cast_from(animation_clip_binding_constant, "/Base/genericBindings/Array").unwrap() {
     curves += if i64::try_cast_from(&b, "/Base/typeID").unwrap() == ClassIDType::Transform as i64 {
       // 1 kBindTransformPosition
       // 2 kBindTransformRotation

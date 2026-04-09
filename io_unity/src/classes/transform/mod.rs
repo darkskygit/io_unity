@@ -30,9 +30,7 @@ pub fn get_transform_path(viewer: &UnityAssetViewer, transform: &Transform) -> R
     if let Ok(father) = transform.get_father() {
       if let Some(father) = PPtr::new(&father).get_type_tree_object_in_view(viewer)? {
         return Ok(
-          get_transform_path(viewer, &Transform::new(&father.into()))?
-            + "/"
-            + &String::try_cast_from(&game_object, "/Base/m_Name").unwrap(),
+          get_transform_path(viewer, &Transform::new(&father.into()))? + "/" + &String::try_cast_from(&game_object, "/Base/m_Name").unwrap(),
         );
       }
     } else {
@@ -42,10 +40,7 @@ pub fn get_transform_path(viewer: &UnityAssetViewer, transform: &Transform) -> R
   Ok(String::default())
 }
 
-pub fn get_bone_children_path_hash_map(
-  viewer: &UnityAssetViewer,
-  transform: &Transform,
-) -> ReadResult<BTreeMap<u32, String>> {
+pub fn get_bone_children_path_hash_map(viewer: &UnityAssetViewer, transform: &Transform) -> ReadResult<BTreeMap<u32, String>> {
   let mut map = BTreeMap::new();
   let mut path = get_transform_path(viewer, transform)?;
 
@@ -80,9 +75,7 @@ pub fn get_bone_path_hash_map(viewer: &UnityAssetViewer, transform: &Transform) 
 
 pub fn get_root_bone(viewer: &UnityAssetViewer, transform: &Transform) -> ReadResult<TypeTreeObjectRef> {
   let mut root_transform = transform.inner().clone();
-  while let Some(father) =
-    PPtr::new(&Transform::new(&root_transform).get_father()?).get_type_tree_object_in_view(viewer)?
-  {
+  while let Some(father) = PPtr::new(&Transform::new(&root_transform).get_father()?).get_type_tree_object_in_view(viewer)? {
     root_transform = father.into();
   }
   Ok(root_transform)

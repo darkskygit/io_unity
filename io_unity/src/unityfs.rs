@@ -191,17 +191,11 @@ impl UnityFS {
   }
 }
 
-fn block_uncompressed(
-  uncompressed_size: u64,
-  flag: CompressionType,
-  blocks_infocompressedd_stream: Vec<u8>,
-) -> std::io::Result<Vec<u8>> {
+fn block_uncompressed(uncompressed_size: u64, flag: CompressionType, blocks_infocompressedd_stream: Vec<u8>) -> std::io::Result<Vec<u8>> {
   let blocks_info_uncompressedd_stream = match flag {
     CompressionType::None => blocks_infocompressedd_stream,
     CompressionType::Lzma => todo!(),
-    CompressionType::Lz4 | CompressionType::Lz4HC => {
-      decompress(&blocks_infocompressedd_stream, Some(uncompressed_size as i32))?
-    }
+    CompressionType::Lz4 | CompressionType::Lz4HC => decompress(&blocks_infocompressedd_stream, Some(uncompressed_size as i32))?,
     CompressionType::Lzham => todo!(),
   };
   Ok(blocks_info_uncompressedd_stream)
@@ -245,11 +239,7 @@ impl Node {
   }
 }
 
-fn blocks_info_parser<R: Read + Seek>(
-  reader: &mut R,
-  _endian: Endian,
-  flags: (u32, u32, u32, ArchiveFlags),
-) -> BinResult<BlocksInfo> {
+fn blocks_info_parser<R: Read + Seek>(reader: &mut R, _endian: Endian, flags: (u32, u32, u32, ArchiveFlags)) -> BinResult<BlocksInfo> {
   let (version, compressed_blocks_info_size, uncompressed_blocks_info_size, flags) = flags;
 
   if version >= 7 {
@@ -308,40 +298,35 @@ impl Read for UnityFSNode {
       Ok(index) => index,
       Err(rindex) => rindex - 1,
     };
-    let (mut compressed_data_offset, mut uncompressed_data_offset) =
-      self.storage_blocks_start_positions[storage_blocks_index];
+    let (mut compressed_data_offset, mut uncompressed_data_offset) = self.storage_blocks_start_positions[storage_blocks_index];
     let mut file_block = Vec::new();
     for sb in &self.storage_blocks[storage_blocks_index..] {
-      if (uncompressed_data_offset + (sb.uncompressed_size as u64))
-        >= ((self.node_info.offset as u64) + self.current_position)
-      {
-        let blocks_info_uncompressedd_stream =
-          if let Some(cache_block) = self.storage_blocks_cache.get(&uncompressed_data_offset) {
-            cache_block
+      if (uncompressed_data_offset + (sb.uncompressed_size as u64)) >= ((self.node_info.offset as u64) + self.current_position) {
+        let blocks_info_uncompressedd_stream = if let Some(cache_block) = self.storage_blocks_cache.get(&uncompressed_data_offset) {
+          cache_block
+        } else {
+          let mut blocks_infocompressedd_stream = vec![0u8; sb.compressed_size as usize];
+          if let Ok(mut file_reader) = self.file_reader.lock() {
+            file_reader.seek(SeekFrom::Start(compressed_data_offset + self.storage_block_position))?;
+            file_reader.read_exact(&mut blocks_infocompressedd_stream)?;
           } else {
-            let mut blocks_infocompressedd_stream = vec![0u8; sb.compressed_size as usize];
-            if let Ok(mut file_reader) = self.file_reader.lock() {
-              file_reader.seek(SeekFrom::Start(compressed_data_offset + self.storage_block_position))?;
-              file_reader.read_exact(&mut blocks_infocompressedd_stream)?;
-            } else {
-              return Err(std::io::Error::from(ErrorKind::BrokenPipe));
-            }
+            return Err(std::io::Error::from(ErrorKind::BrokenPipe));
+          }
 
-            let blocks_info_uncompressedd_stream = block_uncompressed(
-              sb.uncompressed_size as u64,
-              sb.flags.compression_type(),
-              blocks_infocompressedd_stream,
-            )?;
-            self
-              .storage_blocks_cache
-              .insert(uncompressed_data_offset, blocks_info_uncompressedd_stream);
-            self.storage_blocks_cache.get(&uncompressed_data_offset).unwrap()
-          };
+          let blocks_info_uncompressedd_stream = block_uncompressed(
+            sb.uncompressed_size as u64,
+            sb.flags.compression_type(),
+            blocks_infocompressedd_stream,
+          )?;
+          self
+            .storage_blocks_cache
+            .insert(uncompressed_data_offset, blocks_info_uncompressedd_stream);
+          self.storage_blocks_cache.get(&uncompressed_data_offset).unwrap()
+        };
 
         if uncompressed_data_offset < ((self.node_info.offset as u64) + self.current_position) {
           file_block.extend_from_slice(
-            &blocks_info_uncompressedd_stream
-              [(((self.node_info.offset as u64) + self.current_position) - uncompressed_data_offset) as usize..],
+            &blocks_info_uncompressedd_stream[(((self.node_info.offset as u64) + self.current_position) - uncompressed_data_offset) as usize..],
           );
         } else {
           file_block.extend(blocks_info_uncompressedd_stream);

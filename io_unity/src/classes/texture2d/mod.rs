@@ -74,8 +74,7 @@ pub trait Texture2DObject {
           }
           _ => unreachable!(),
         }
-        let result =
-          RgbaImage::from_raw(width as u32, height as u32, output).ok_or(Error::Other("from_raw".to_owned()))?;
+        let result = RgbaImage::from_raw(width as u32, height as u32, output).ok_or(Error::Other("from_raw".to_owned()))?;
         Ok(DynamicImage::ImageRgba8(result))
       }
       TextureFormat::ASTC_RGB_4x4
@@ -99,60 +98,40 @@ pub trait Texture2DObject {
         let size = width * height;
         let mut output = vec![[0u8; 4]; size];
         let footprint = match &texture_format {
-          TextureFormat::ASTC_RGB_4x4 | TextureFormat::ASTC_RGBA_4x4 | TextureFormat::ASTC_HDR_4x4 => {
-            astc_decode::Footprint::new(4, 4)
-          }
-          TextureFormat::ASTC_RGB_5x5 | TextureFormat::ASTC_RGBA_5x5 | TextureFormat::ASTC_HDR_5x5 => {
-            astc_decode::Footprint::new(5, 5)
-          }
-          TextureFormat::ASTC_RGB_6x6 | TextureFormat::ASTC_RGBA_6x6 | TextureFormat::ASTC_HDR_6x6 => {
-            astc_decode::Footprint::new(6, 6)
-          }
-          TextureFormat::ASTC_RGB_8x8 | TextureFormat::ASTC_RGBA_8x8 | TextureFormat::ASTC_HDR_8x8 => {
-            astc_decode::Footprint::new(8, 8)
-          }
-          TextureFormat::ASTC_RGB_10x10 | TextureFormat::ASTC_RGBA_10x10 | TextureFormat::ASTC_HDR_10x10 => {
-            astc_decode::Footprint::new(10, 10)
-          }
-          TextureFormat::ASTC_RGB_12x12 | TextureFormat::ASTC_RGBA_12x12 | TextureFormat::ASTC_HDR_12x12 => {
-            astc_decode::Footprint::new(12, 12)
-          }
+          TextureFormat::ASTC_RGB_4x4 | TextureFormat::ASTC_RGBA_4x4 | TextureFormat::ASTC_HDR_4x4 => astc_decode::Footprint::new(4, 4),
+          TextureFormat::ASTC_RGB_5x5 | TextureFormat::ASTC_RGBA_5x5 | TextureFormat::ASTC_HDR_5x5 => astc_decode::Footprint::new(5, 5),
+          TextureFormat::ASTC_RGB_6x6 | TextureFormat::ASTC_RGBA_6x6 | TextureFormat::ASTC_HDR_6x6 => astc_decode::Footprint::new(6, 6),
+          TextureFormat::ASTC_RGB_8x8 | TextureFormat::ASTC_RGBA_8x8 | TextureFormat::ASTC_HDR_8x8 => astc_decode::Footprint::new(8, 8),
+          TextureFormat::ASTC_RGB_10x10 | TextureFormat::ASTC_RGBA_10x10 | TextureFormat::ASTC_HDR_10x10 => astc_decode::Footprint::new(10, 10),
+          TextureFormat::ASTC_RGB_12x12 | TextureFormat::ASTC_RGBA_12x12 | TextureFormat::ASTC_HDR_12x12 => astc_decode::Footprint::new(12, 12),
           _ => unreachable!(),
         };
         astc_decode::astc_decode(&*data, width as u32, height as u32, footprint, |x, y, color| {
           output[x as usize + y as usize * width] = color;
         })?;
 
-        let result = RgbaImage::from_raw(width as u32, height as u32, output.concat())
-          .ok_or(Error::Other("from_raw".to_owned()))?;
+        let result = RgbaImage::from_raw(width as u32, height as u32, output.concat()).ok_or(Error::Other("from_raw".to_owned()))?;
         Ok(DynamicImage::ImageRgba8(result))
       }
       TextureFormat::Alpha8 => {
         let buff: Vec<[u8; 2]> = data.into_iter().map(|f| [0, f]).collect();
-        let result = GrayAlphaImage::from_raw(width as u32, height as u32, buff.concat())
-          .ok_or(Error::Other("from_raw".to_owned()))?;
+        let result = GrayAlphaImage::from_raw(width as u32, height as u32, buff.concat()).ok_or(Error::Other("from_raw".to_owned()))?;
         Ok(DynamicImage::ImageLumaA8(result))
       }
       TextureFormat::RGB24 => {
-        let result =
-          RgbImage::from_raw(width as u32, height as u32, data.to_vec()).ok_or(Error::Other("from_raw".to_owned()))?;
+        let result = RgbImage::from_raw(width as u32, height as u32, data.to_vec()).ok_or(Error::Other("from_raw".to_owned()))?;
         Ok(DynamicImage::ImageRgb8(result))
       }
       TextureFormat::RGBA32 => {
-        let result =
-          RgbaImage::from_raw(width as u32, height as u32, data.to_vec()).ok_or(Error::Other("from_raw".to_owned()))?;
+        let result = RgbaImage::from_raw(width as u32, height as u32, data.to_vec()).ok_or(Error::Other("from_raw".to_owned()))?;
         Ok(DynamicImage::ImageRgba8(result))
       }
       TextureFormat::ARGB4444 => {
         let buff = argb4444_to_rgba8888(&data);
-        let result =
-          RgbaImage::from_raw(width as u32, height as u32, buff).ok_or(Error::Other("from_raw".to_owned()))?;
+        let result = RgbaImage::from_raw(width as u32, height as u32, buff).ok_or(Error::Other("from_raw".to_owned()))?;
         Ok(DynamicImage::ImageRgba8(result))
       }
-      _ => Err(Error::Other(format!(
-        "unsupport texture_format: {:?}",
-        self.get_texture_format()
-      ))),
+      _ => Err(Error::Other(format!("unsupport texture_format: {:?}", self.get_texture_format()))),
     }
   }
 }

@@ -17,9 +17,7 @@ impl AudioClipObject for AudioClip<'_> {
     let resource_offset = self.get_resource_offset()?;
     let resource_size = self.get_resource_size()?;
 
-    if let Some(mut file) =
-      viewer.get_resource_file_by_serialized_file_id_and_path(self.get_serialized_file_id(), &resource_source)
-    {
+    if let Some(mut file) = viewer.get_resource_file_by_serialized_file_id_and_path(self.get_serialized_file_id(), &resource_source) {
       file.seek(SeekFrom::Start(resource_offset))?;
       let mut data = vec![0u8; resource_size as usize];
       file.read_exact(&mut data)?;

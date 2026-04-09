@@ -23,10 +23,7 @@ impl UnityVersion {
     static VERSION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\D").unwrap());
 
     Ok(UnityVersion {
-      version: VERSION_REGEX
-        .split(version)
-        .map(|d| d.parse::<u32>().unwrap())
-        .collect(),
+      version: VERSION_REGEX.split(version).map(|d| d.parse::<u32>().unwrap()).collect(),
       build_type: BUILD_TYPE_REGEX
         .captures(version)
         .and_then(|c| c.get(0))
