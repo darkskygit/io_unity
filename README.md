@@ -1,73 +1,30 @@
-# io_unity
+# io_unity_next
 
-**io_unity is a lib for read unity assets, which supports parsing UnityFS file and serialized file.**
+`io_unity_next` is a Rust library for reading Unity assets, including UnityFS bundles and serialized files.
 
-[![Crates.io](https://img.shields.io/crates/v/io_unity)](https://crates.io/crates/io_unity)
+[![Crates.io](https://img.shields.io/crates/v/io_unity_next)](https://crates.io/crates/io_unity_next)
 
-## Additional type tree
+## Type tree data
 
-The crate can use
-tar zstd compressed file contain type tree info json files
-for read file without typetree info.
-see https://github.com/DaZombieKiller/TypeTreeDumper
-and https://github.com/AssetRipper/TypeTreeDumps.  
-File can create by InfoJson in TypeTreeDumps use
+The `type-tree-json` feature supports reading assets without embedded type trees by loading a zstd-compressed tar archive of JSON type tree data. Compatible data can be generated from [TypeTreeDumper](https://github.com/DaZombieKiller/TypeTreeDumper) or [TypeTreeDumps](https://github.com/AssetRipper/TypeTreeDumps).
+
+Create an archive from the `InfoJson` directory with either command:
 
 ```sh
 tar -caf InfoJson.tar.zst InfoJson
 ```
 
-or
-
 ```sh
 tar -c InfoJson | zstd --ultra -22 -o InfoJson.tar.zst
 ```
 
-whitch can be less then 5MiB.
-contain file path like /InfoJson/x.x.x.json.
+The archive should contain paths such as `InfoJson/x.x.x.json`.
 
-# example
+## Examples
 
-[io_unity/examples/live2dextractor.rs](io_unity/examples/live2dextractor.rs)
+Build and run the Live2D extractor with all optional formats enabled:
 
 ```sh
-# build
-cargo build --example live2dextractor --release --features="all"
-# run
-cargo run --example live2dextractor --release --features="all" -- help
-```
-
-# simple python bind
-
-[io_unity_python](io_unity_python/README.md)
-
-```python
-import io_unity_python
-
-uav = io_unity_python.UnityAssetViewer()
-uav.add_bundle_file("BUNDLE FILE PATH")
-
-for objref in uav.get_objrefs():
-    obj = uav.deref_object_ref(objref)
-    obj.display_tree()
-    try:
-        print(obj.m_Name)
-    except AttributeError:
-        pass
-
-print(help(obj))
-```
-
-[simple python](io_unity_python/blender.py) for blender import mesh and skeleton.
-
-# simple gui
-
-use [tauri](https://tauri.app/v1/guides/getting-started/prerequisites)  
-require [pnpm](https://pnpm.io/installation)
-
-run
-
-```shell
-cd io_unity_gui
-pnpm tauri dev
+cargo build --example live2dextractor --release --all-features
+cargo run --example live2dextractor --release --all-features -- help
 ```

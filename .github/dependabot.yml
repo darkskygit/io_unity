@@ -5,13 +5,7 @@
 
 version: 2
 updates:
-  - package-ecosystem: "cargo" # See documentation for possible values
-    directory: "/" # Location of package manifests
-    schedule:
-      interval: "weekly"
-
-  # Maintain dependencies for npm
-  - package-ecosystem: "npm"
-    directory: "/io_unity_gui"
+  - package-ecosystem: "cargo"
+    directory: "/"
     schedule:
       interval: "weekly"
