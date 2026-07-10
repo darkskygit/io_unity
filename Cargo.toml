@@ -9,7 +9,7 @@ name         = "io_unity_next"
 readme       = "README.md"
 repository   = "https://github.com/darkskygit/io_unity_next"
 rust-version = "1.85"
-version      = "0.3.0"
+version      = "0.1.0"
 
 [dependencies]
 astc-decode = { version = "0.3.1", optional = true }
