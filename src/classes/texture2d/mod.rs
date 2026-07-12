@@ -31,6 +31,16 @@ fn argb4444_to_rgba8888(input: &[u8]) -> Vec<u8> {
   output
 }
 
+fn bgra32_pixels_to_rgba8888(input: Vec<u32>) -> Vec<u8> {
+  input
+    .into_iter()
+    .flat_map(|pixel| {
+      let [b, g, r, a] = pixel.to_le_bytes();
+      [r, g, b, a]
+    })
+    .collect()
+}
+
 pub trait Texture2DObject {
   fn get_width(&self) -> ReadResult<u64>;
   fn get_height(&self) -> ReadResult<u64>;
@@ -53,30 +63,45 @@ pub trait Texture2DObject {
       | TextureFormat::BC7
       | TextureFormat::DXT1Crunched
       | TextureFormat::DXT5Crunched => {
-        let size = width * height * 4;
-        let mut output = vec![0; size];
-        match &texture_format {
-          TextureFormat::DXT1 => texpresso::Format::Bc1.decompress(&data, width, height, &mut output),
-          TextureFormat::DXT3 => texpresso::Format::Bc2.decompress(&data, width, height, &mut output),
-          TextureFormat::DXT5 => texpresso::Format::Bc3.decompress(&data, width, height, &mut output),
+        let output = match &texture_format {
+          TextureFormat::DXT1 => {
+            let mut output = vec![0; width * height * 4];
+            texpresso::Format::Bc1.decompress(&data, width, height, &mut output);
+            output
+          }
+          TextureFormat::DXT3 => {
+            let mut output = vec![0; width * height * 4];
+            texpresso::Format::Bc2.decompress(&data, width, height, &mut output);
+            output
+          }
+          TextureFormat::DXT5 => {
+            let mut output = vec![0; width * height * 4];
+            texpresso::Format::Bc3.decompress(&data, width, height, &mut output);
+            output
+          }
           TextureFormat::DXT1Crunched | TextureFormat::DXT5Crunched => {
             let mut image: Vec<u32> = vec![0; width * height];
             if let Err(e) = texture2ddecoder::decode_unity_crunch(&data, width, height, &mut image) {
               return Err(Error::Other(format!("decode_unity_crunch: {:?}", e)));
             }
-            // convert Vec<u32> to Vec<u8>
-            for pixel in image {
-              output.extend_from_slice(&pixel.to_le_bytes());
-            }
+            bgra32_pixels_to_rgba8888(image)
           }
 
-          TextureFormat::BC4 => texpresso::Format::Bc4.decompress(&data, width, height, &mut output),
-          TextureFormat::BC5 => texpresso::Format::Bc5.decompress(&data, width, height, &mut output),
+          TextureFormat::BC4 => {
+            let mut output = vec![0; width * height * 4];
+            texpresso::Format::Bc4.decompress(&data, width, height, &mut output);
+            output
+          }
+          TextureFormat::BC5 => {
+            let mut output = vec![0; width * height * 4];
+            texpresso::Format::Bc5.decompress(&data, width, height, &mut output);
+            output
+          }
           TextureFormat::BC6H | TextureFormat::BC7 => {
             return Err(Error::Other(format!("unsupport {:?}", self.get_texture_format())));
           }
           _ => unreachable!(),
-        }
+        };
         let result = RgbaImage::from_raw(width as u32, height as u32, output).ok_or(Error::Other("from_raw".to_owned()))?;
         Ok(DynamicImage::ImageRgba8(result))
       }

@@ -1,6 +1,6 @@
 use image::Rgba;
 
-use super::{Texture2DObject, TextureFormat};
+use super::{Texture2DObject, TextureFormat, bgra32_pixels_to_rgba8888};
 use crate::{error::ReadResult, unity_asset_view::UnityAssetViewer};
 
 struct FixtureTexture {
@@ -54,4 +54,9 @@ fn expands_argb4444_channels_to_rgba8() {
 
   let image = texture.get_image(&UnityAssetViewer::new()).unwrap().to_rgba8();
   assert_eq!(*image.get_pixel(0, 0), Rgba([0x11, 0x22, 0x33, 0xFF]));
+}
+
+#[test]
+fn converts_crunch_decoder_bgra_pixels_to_rgba() {
+  assert_eq!(bgra32_pixels_to_rgba8888(vec![0xFF_FC_A9_68]), [0xFC, 0xA9, 0x68, 0xFF]);
 }
