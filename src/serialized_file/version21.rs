@@ -133,7 +133,7 @@ pub struct SerializedRefType {
   class_id: i32,
   is_stripped_type: U8Bool,
   script_type_index: i16,
-  #[br(if(class_id == 114))]
+  #[br(if(script_type_index >= 0))]
   script_id: Option<[u8; 16]>,
   old_type_hash: [u8; 16],
   #[br(if(enable_type_tree))]
@@ -141,4 +141,55 @@ pub struct SerializedRefType {
   class_name: NullString,
   name_space: NullString,
   assembly_name: NullString,
+}
+
+#[cfg(test)]
+mod tests {
+  use std::io::{Cursor, Seek};
+
+  use binrw::BinRead;
+
+  use super::*;
+
+  fn ref_type_bytes(script_type_index: i16) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&(-1_i32).to_le_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(&script_type_index.to_le_bytes());
+    if script_type_index >= 0 {
+      bytes.extend_from_slice(&[0xab; 16]);
+    }
+    bytes.extend_from_slice(&[0xcd; 16]);
+    for value in ["SyntheticRef", "Tests", "Synthetic.dll"] {
+      bytes.extend_from_slice(value.as_bytes());
+      bytes.push(0);
+    }
+    bytes
+  }
+
+  fn assert_ref_type_alignment(script_type_index: i16) {
+    let bytes = ref_type_bytes(script_type_index);
+    let mut reader = Cursor::new(bytes.as_slice());
+    let parsed = SerializedRefType::read_options(
+      &mut reader,
+      binrw::Endian::Little,
+      SerializedRefTypeBinReadArgs { enable_type_tree: false },
+    )
+    .unwrap();
+
+    assert_eq!(parsed.class_id, -1);
+    assert_eq!(parsed.script_type_index, script_type_index);
+    assert_eq!(parsed.script_id, (script_type_index >= 0).then_some([0xab; 16]));
+    assert_eq!(parsed.old_type_hash, [0xcd; 16]);
+    assert_eq!(parsed.class_name.to_string(), "SyntheticRef");
+    assert_eq!(parsed.name_space.to_string(), "Tests");
+    assert_eq!(parsed.assembly_name.to_string(), "Synthetic.dll");
+    assert_eq!(reader.stream_position().unwrap(), bytes.len() as u64);
+  }
+
+  #[test]
+  fn ref_type_script_identity_is_controlled_by_script_type_index() {
+    assert_ref_type_alignment(0);
+    assert_ref_type_alignment(-1);
+  }
 }
