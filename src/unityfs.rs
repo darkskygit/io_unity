@@ -1,6 +1,6 @@
 use std::{
   collections::BTreeMap,
-  io::{ErrorKind, SeekFrom, prelude::*},
+  io::{BufReader, Error as IoError, ErrorKind, SeekFrom, prelude::*},
   sync::{Arc, Mutex},
 };
 
@@ -150,6 +150,27 @@ impl UnityFS {
     Err(std::io::Error::from(ErrorKind::NotFound))
   }
 
+  /// Compression survey data: (archive version, archive-level compression type code,
+  /// per storage block (compressed_size, uncompressed_size, compression type code)).
+  /// Compression codes: 0=None, 1=Lzma, 2=Lz4, 3=Lz4HC, 4=Lzham.
+  pub fn compression_survey(&self) -> (u32, u8, Vec<(i32, u32, u8)>) {
+    let archive_compression = compression_code(&self.content.flags.compression_type());
+    let blocks = self
+      .content
+      .blocks_info
+      .storage_blocks
+      .iter()
+      .map(|sb| {
+        (
+          sb.compressed_size,
+          sb.uncompressed_size,
+          compression_code(&sb.flags.compression_type()),
+        )
+      })
+      .collect();
+    (self.content.version, archive_compression, blocks)
+  }
+
   pub fn get_cab_path(&self) -> Vec<String> {
     let mut paths = vec![];
     for file in &self.content.blocks_info.directory_info {
@@ -191,12 +212,40 @@ impl UnityFS {
   }
 }
 
+fn compression_code(flag: &CompressionType) -> u8 {
+  match flag {
+    CompressionType::None => 0,
+    CompressionType::Lzma => 1,
+    CompressionType::Lz4 => 2,
+    CompressionType::Lz4HC => 3,
+    CompressionType::Lzham => 4,
+  }
+}
+
 fn block_uncompressed(uncompressed_size: u64, flag: CompressionType, blocks_infocompressedd_stream: Vec<u8>) -> std::io::Result<Vec<u8>> {
   let blocks_info_uncompressedd_stream = match flag {
     CompressionType::None => blocks_infocompressedd_stream,
-    CompressionType::Lzma => todo!(),
+    CompressionType::Lzma => {
+      // Unity LZMA block: 5-byte props header (1 byte lc/lp/pb + 4 bytes LE dict size)
+      // followed by a raw LZMA1 stream without the 8-byte unpacked-size field.
+      // The unpacked size is known from the storage block entry.
+      let mut input = BufReader::new(std::io::Cursor::new(&blocks_infocompressedd_stream));
+      let mut output = Vec::with_capacity(uncompressed_size as usize);
+      lzma_rs::lzma_decompress_with_options(
+        &mut input,
+        &mut output,
+        &lzma_rs::decompress::Options {
+          unpacked_size: lzma_rs::decompress::UnpackedSize::UseProvided(Some(uncompressed_size)),
+          ..Default::default()
+        },
+      )
+      .map_err(|e| IoError::new(ErrorKind::InvalidData, e))?;
+      output
+    }
     CompressionType::Lz4 | CompressionType::Lz4HC => decompress(&blocks_infocompressedd_stream, Some(uncompressed_size as i32))?,
-    CompressionType::Lzham => todo!(),
+    CompressionType::Lzham => {
+      return Err(IoError::new(ErrorKind::Unsupported, "LZHAM compression is not supported"));
+    }
   };
   Ok(blocks_info_uncompressedd_stream)
 }

@@ -9,7 +9,7 @@ name         = "io_unity_next"
 readme       = "README.md"
 repository   = "https://github.com/darkskygit/io_unity_next"
 rust-version = "1.85"
-version      = "0.1.0"
+version      = "0.1.1"
 
 [dependencies]
 astc-decode = { version = "0.3.1", optional = true }
@@ -21,6 +21,7 @@ image = { version = "0.25.9", default-features = false, features = [
   "png",
 ], optional = true }
 lz4 = "1.28.1"
+lzma-rs = "0.3"
 modular-bitfield = "0.13.1"
 num_enum = "0.7.6"
 once_cell = "1.21.4"
@@ -62,3 +63,7 @@ required-features = ["all"]
 [[example]]
 name              = "live2dextractor"
 required-features = ["all"]
+
+[[example]]
+name              = "ufs_survey"
+required-features = ["type-tree-json"]
