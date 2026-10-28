@@ -67,6 +67,96 @@ pub struct UnityFS {
   file_reader: Arc<Mutex<Box<dyn UnityResource + Send>>>,
   pub resource_search_path: Option<String>,
   storage_blocks_start_positions: Vec<(u64, u64)>,
+  /// Decompressed storage blocks, shared by every node of this archive.
+  ///
+  /// A UnityFS archive stores many members in the same storage blocks. The
+  /// cache used to be per `UnityFSNode`, so reading k members of one bundle
+  /// decompressed the same blocks k times — LZMA dominates ingest time. This
+  /// cache lives on the archive and is keyed by the block's uncompressed
+  /// offset, so later members reuse earlier decompression.
+  blocks: Arc<Mutex<BlockCache>>,
+}
+
+/// LRU-ish cache of decompressed storage blocks (`uncompressed offset` →
+/// bytes), bounded by a byte budget.
+///
+/// Decompressed bytes are a pure function of the compressed block, so sharing
+/// them across nodes cannot change what a member read returns.
+#[derive(Debug, Default)]
+struct BlockCache {
+  entries: BTreeMap<u64, Arc<Vec<u8>>>,
+  order: std::collections::VecDeque<u64>,
+  bytes: usize,
+  capacity: usize,
+}
+
+impl BlockCache {
+  fn new() -> Self {
+    Self {
+      capacity: block_cache_capacity(),
+      ..Default::default()
+    }
+  }
+
+  fn get(&self, key: u64) -> Option<Arc<Vec<u8>>> {
+    self.entries.get(&key).cloned()
+  }
+
+  fn put(&mut self, key: u64, value: Arc<Vec<u8>>) {
+    if self.capacity == 0 || value.len() > self.capacity {
+      return;
+    }
+    if let Some(previous) = self.entries.insert(key, value.clone()) {
+      self.bytes -= previous.len();
+      self.order.retain(|existing| *existing != key);
+    }
+    self.bytes += value.len();
+    self.order.push_back(key);
+    while self.bytes > self.capacity {
+      let Some(oldest) = self.order.pop_front() else {
+        break;
+      };
+      if let Some(evicted) = self.entries.remove(&oldest) {
+        self.bytes -= evicted.len();
+      }
+    }
+  }
+}
+
+/// Byte budget for decompressed blocks, per archive (`IO_UNITY_BLOCK_CACHE_MB`,
+/// default 512 MiB; `0` disables the cache).
+fn block_cache_capacity() -> usize {
+  let megabytes = std::env::var("IO_UNITY_BLOCK_CACHE_MB")
+    .ok()
+    .and_then(|value| value.trim().parse::<usize>().ok())
+    .unwrap_or(512);
+  megabytes.saturating_mul(1024 * 1024)
+}
+
+/// Decompressed block `key` of an archive, decompressing and caching on miss.
+fn load_block(
+  cache: &Arc<Mutex<BlockCache>>,
+  reader: &Arc<Mutex<Box<dyn UnityResource + Send>>>,
+  key: u64,
+  block: &StorageBlock,
+  compressed_offset: u64,
+) -> std::io::Result<Arc<Vec<u8>>> {
+  if let Ok(cache) = cache.lock() {
+    if let Some(hit) = cache.get(key) {
+      return Ok(hit);
+    }
+  }
+  let mut compressed = vec![0u8; block.compressed_size as usize];
+  {
+    let mut reader = reader.lock().map_err(|_| IoError::from(ErrorKind::BrokenPipe))?;
+    reader.seek(SeekFrom::Start(compressed_offset))?;
+    reader.read_exact(&mut compressed)?;
+  }
+  let data = Arc::new(block_uncompressed(block.uncompressed_size as u64, block.flags.compression_type(), compressed)?);
+  if let Ok(mut cache) = cache.lock() {
+    cache.put(key, data.clone());
+  }
+  Ok(data)
 }
 
 #[binrw]
@@ -103,10 +193,10 @@ impl UnityFS {
       if path == &node.path() {
         return Some(UnityFSNode {
           file_reader: self.file_reader.clone(),
+          blocks: self.blocks.clone(),
           storage_blocks: self.content.blocks_info.storage_blocks.clone(),
           storage_blocks_start_positions: self.storage_blocks_start_positions.clone(),
           storage_block_position: self.content.position,
-          storage_blocks_cache: BTreeMap::new(),
           node_info: node.clone(),
           current_position: 0,
         });
@@ -121,24 +211,21 @@ impl UnityFS {
     let mut file_block = Vec::new();
     for sb in &self.content.blocks_info.storage_blocks {
       if (uncompressed_data_offset + (sb.uncompressed_size as u64)) >= node.offset as u64 {
-        let mut blocks_infocompressedd_stream = vec![0u8; sb.compressed_size as usize];
-        if let Ok(mut file_reader) = self.file_reader.lock() {
-          file_reader.seek(SeekFrom::Start(compressed_data_offset + self.content.position))?;
-          file_reader.read_exact(&mut blocks_infocompressedd_stream)?;
-        } else {
-          return Err(std::io::Error::from(ErrorKind::BrokenPipe));
-        }
-
-        let mut blocks_info_uncompressedd_stream = block_uncompressed(
-          sb.uncompressed_size as u64,
-          sb.flags.compression_type(),
-          blocks_infocompressedd_stream,
+        // Same archive-level cache as `UnityFSNode::read`: members of one
+        // bundle share blocks, so a whole-bundle read decompresses each block
+        // once instead of once per member.
+        let blocks = load_block(
+          &self.blocks,
+          &self.file_reader,
+          uncompressed_data_offset,
+          sb,
+          compressed_data_offset + self.content.position,
         )?;
         if uncompressed_data_offset < node.offset as u64 {
-          blocks_info_uncompressedd_stream =
-            blocks_info_uncompressedd_stream[(node.offset as u64 - uncompressed_data_offset) as usize..].to_vec();
+          file_block.extend_from_slice(&blocks[(node.offset as u64 - uncompressed_data_offset) as usize..]);
+        } else {
+          file_block.extend_from_slice(&blocks);
         }
-        file_block.extend(blocks_info_uncompressedd_stream);
         if file_block.len() >= node.size as usize {
           file_block.truncate(node.size as usize);
           return Ok(file_block);
@@ -208,6 +295,7 @@ impl UnityFS {
       file_reader: Arc::new(Mutex::new(file)),
       resource_search_path,
       storage_blocks_start_positions,
+      blocks: Arc::new(Mutex::new(BlockCache::new())),
     })
   }
 }
@@ -334,7 +422,9 @@ pub struct UnityFSNode {
   storage_block_position: u64,
   node_info: Node,
   current_position: u64,
-  storage_blocks_cache: BTreeMap<u64, Vec<u8>>,
+  /// Shared with the archive: every node of one bundle reuses the same
+  /// decompressed blocks.
+  blocks: Arc<Mutex<BlockCache>>,
 }
 
 impl Read for UnityFSNode {
@@ -351,34 +441,20 @@ impl Read for UnityFSNode {
     let mut file_block = Vec::new();
     for sb in &self.storage_blocks[storage_blocks_index..] {
       if (uncompressed_data_offset + (sb.uncompressed_size as u64)) >= ((self.node_info.offset as u64) + self.current_position) {
-        let blocks_info_uncompressedd_stream = if let Some(cache_block) = self.storage_blocks_cache.get(&uncompressed_data_offset) {
-          cache_block
-        } else {
-          let mut blocks_infocompressedd_stream = vec![0u8; sb.compressed_size as usize];
-          if let Ok(mut file_reader) = self.file_reader.lock() {
-            file_reader.seek(SeekFrom::Start(compressed_data_offset + self.storage_block_position))?;
-            file_reader.read_exact(&mut blocks_infocompressedd_stream)?;
-          } else {
-            return Err(std::io::Error::from(ErrorKind::BrokenPipe));
-          }
-
-          let blocks_info_uncompressedd_stream = block_uncompressed(
-            sb.uncompressed_size as u64,
-            sb.flags.compression_type(),
-            blocks_infocompressedd_stream,
-          )?;
-          self
-            .storage_blocks_cache
-            .insert(uncompressed_data_offset, blocks_info_uncompressedd_stream);
-          self.storage_blocks_cache.get(&uncompressed_data_offset).unwrap()
-        };
+        let blocks_info_uncompressedd_stream = load_block(
+          &self.blocks,
+          &self.file_reader,
+          uncompressed_data_offset,
+          sb,
+          compressed_data_offset + self.storage_block_position,
+        )?;
 
         if uncompressed_data_offset < ((self.node_info.offset as u64) + self.current_position) {
           file_block.extend_from_slice(
             &blocks_info_uncompressedd_stream[(((self.node_info.offset as u64) + self.current_position) - uncompressed_data_offset) as usize..],
           );
         } else {
-          file_block.extend(blocks_info_uncompressedd_stream);
+          file_block.extend_from_slice(&blocks_info_uncompressedd_stream);
         }
         if file_block.len() >= buf.len() {
           let buf_len = buf.len();

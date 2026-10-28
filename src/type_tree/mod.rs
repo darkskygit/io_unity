@@ -13,10 +13,10 @@ use std::{
 };
 
 use self::convert::FieldCastArgs;
-use crate::{
-  error::{Error, ReadResult},
-  type_tree::convert::TryCast,
-};
+use crate::{error::ReadResult, type_tree::convert::TryCast};
+
+// Downstream crates reach the typetree error via `type_tree::Error`.
+pub use crate::error::Error;
 
 pub trait TypeField: Debug {
   fn get_version(&self) -> u16;
